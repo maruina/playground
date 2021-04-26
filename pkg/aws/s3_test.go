@@ -10,6 +10,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/golang/mock/gomock"
+	"github.com/maruina/playground/mocks"
 	. "github.com/onsi/gomega"
 )
 
@@ -73,4 +75,28 @@ func TestGetObjectFromS3(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetObjectFromS3HappyPath(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	m := mocks.NewMockS3Client(ctrl)
+
+	ctx := context.Background()
+	bucket := "bucket"
+	key := "key"
+	expectedBody := []byte("this is the body")
+	fakeBucket := &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}
+	fakeObject := &s3.GetObjectOutput{
+		Body: ioutil.NopCloser(bytes.NewReader(expectedBody)),
+	}
+
+	m.EXPECT().GetObject(ctx, fakeBucket).Return(fakeObject, nil)
+	g := NewWithT(t)
+	got, err := GetS3Object(ctx, m, bucket, key)
+	g.Expect(got).To(Equal(expectedBody))
+	g.Expect(err).To(BeNil())
+
 }
